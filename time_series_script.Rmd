@@ -1,0 +1,71 @@
+
+# Import Library and Setup
+```{r}
+library(dplyr)
+library(lubridate)
+library(forecast)
+library(TTR)
+library(ggplot2)
+library(tseries)
+library(gridExtra)
+```
+
+# Data Import
+```{r}
+covid <- read.csv("D:/emotions/archive (1)/covid_19_indonesia_time_series_all.csv")
+rmarkdown::paged_table(covid)
+```
+The data has 4,578 obs and 37 columns. 
+
+#Data Preparation and EDA
+```{r}
+#subset the location only Jakarta, and column i..Date, and New.Cases and change data type
+covid1 <- covid %>% 
+  subset(Location == "DKI Jakarta") %>% 
+  select(ï..Date, New.Cases) %>% 
+  mutate(ï..Date = mdy(ï..Date)) 
+
+#change the column name from i..Date to Date
+colnames(covid1)[1] = "Date"
+```
+#After subset the data can’t contain NA (missing value)
+
+```{r}
+#Check if there is missing column in data
+colSums(is.na(covid1))
+```
+The data in Maret is so much of 0 value, so we’ll use the data start from April..The data must be ordered by time.
+
+```{r}
+covid1 <- covid1 %>% 
+  subset(Date >= "2020-04-01")
+```
+Then we’ll check when the data start and end.
+
+
+```{r}
+range(covid1$Date)
+```
+Now, our data is from April 1, 2020 to July 31, 2020. Then we’ll convert the data to ts object.
+
+
+```{r}
+#create object ts 
+covid_ts <- ts(data = covid1$New.Cases,
+   start = min(covid1$Date),
+   frequency = 7) #weekly seasonality 
+
+#visualise object covid_ts
+covid_ts %>% autoplot()
+```
+From the plot, we can see that our data’s model is multiplicative. We’ll try to see the seasonality, trend and error of data.
+
+```{r}
+covid_dc <- decompose(covid_ts, type = "multiplicative")
+covid_dc %>% autoplot()
+```
+We can also see an up or down trend using adjusted seasonal which has removing the effects of seasonal data.
+```{r}
+autoplot(covid_dc$x - covid_dc$seasonal)
+```
+From the plot and information above, we can see that the data’s seasonal pattern is random or no seasonal. The trend patterns of data is increasing.
